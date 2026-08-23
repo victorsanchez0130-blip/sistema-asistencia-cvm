@@ -75,7 +75,7 @@ db.serialize(() => {
   });
 
   const stmt = db.prepare("INSERT OR IGNORE INTO usuarios (codigo, nombre, rol, materia_aula) VALUES (?, ?, ?, ?)");
-  stmt.run('DIR-SRN-001', 'Manuel Asencio Málaga', 'Director', 'Dirección General');
+  stmt.run('DIR-SRN-001', 'PIP Ruben Edgar Soncco Ccama', 'Director', 'Dirección General');
   stmt.finalize();
 });
 
