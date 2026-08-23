@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>I.E. CÉSAR VALLEJO MENDOZA - Iniciar Sesión</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="bg-slate-900 flex items-center justify-center min-h-screen">
+  <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
+    <div class="text-center mb-6">
+      <div class="flex items-center justify-center gap-3 mb-3 pb-3 border-b border-slate-200">
+        <img src="img/logo.png" alt="Logo I.E. CÉSAR VALLEJO MENDOZA" class="w-12 h-12 object-contain">
+        <h2 class="text-slate-800 font-bold text-lg">I.E. CÉSAR VALLEJO MENDOZA</h2>
+      </div>
+      <p class="text-xs text-slate-500 font-medium">Sistema Oficial de Control Asistencial</p>
+    </div>
+    <form id="login-form" class="space-y-4">
+      <div>
+        <label class="block text-xs font-bold text-slate-600 mb-1">CÓDIGO DE USUARIO</label>
+        <input type="text" id="login-codigo" placeholder="INGRESAR USUARIO" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm uppercase" required>
+      </div>
+      <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-lg text-sm">Ingresar al Sistema</button>
+    </form>
+  </div>
+
+  <!-- Cargar librería de control de sesión -->
+  <script src="js/auth.js"></script>
+
+  <script>
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const codigo = document.getElementById('login-codigo').value;
+      
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ codigo })
+        });
+        
+        const data = await res.json();
+        
+        if (res.ok && data.success) {
+          // Guardar sesión estandarizada
+          localStorage.setItem('user_session', JSON.stringify(data.usuario));
+          localStorage.setItem('usuario', JSON.stringify(data.usuario));
+          
+          // Redirección centralizada según la matriz de roles
+          checkAuth();
+        } else {
+          alert(data.mensaje || 'Código de usuario inválido');
+        }
+      } catch (error) {
+        console.error('Error de red:', error);
+        alert('No se pudo conectar con el servidor.');
+      }
+    });
+  </script>
+</body>
+</html>

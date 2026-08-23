@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rankings de Méritos | I.E. CÉSAR VALLEJO MENDOZA</title>
+
+  <!-- GUARDIA DE SEGURIDAD Y PERMISOS POR ROL -->
+  <script src="js/auth.js"></script>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Generación de PDFs -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+  
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 flex flex-col md:flex-row h-screen overflow-hidden">
+
+  <!-- HEADER PARA MÓVILES -->
+  <header class="md:hidden bg-slate-900 text-slate-300 p-4 flex justify-between items-center z-30 border-b border-slate-800">
+    <div class="flex items-center gap-3">
+      <img src="img/logo.png" alt="Logo I.E. CÉSAR VALLEJO MENDOZA" class="w-8 h-8 object-contain" onerror="this.src='https://cdn-icons-png.flaticon.com/512/2991/2991108.png'">
+      <h2 class="text-white font-bold text-sm tracking-wider">I.E. CÉSAR VALLEJO MENDOZA</h2>
+    </div>
+    <button id="mobileMenuBtn" class="text-white text-xl focus:outline-none p-1">
+      <i class="fa-solid fa-bars"></i>
+    </button>
+  </header>
+
+  <!-- SIDEBAR NAVEGACIÓN DINÁMICO -->
+  <aside id="sidebar" class="fixed inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 w-64 bg-slate-900 text-slate-300 flex flex-col justify-between shadow-xl z-20 min-h-screen transition-transform duration-200 ease-in-out">
+    <div>
+      <div class="flex items-center gap-3 p-4 border-b border-slate-800">
+        <img src="img/logo.png" alt="Logo I.E. CÉSAR VALLEJO MENDOZA" class="w-12 h-12 object-contain" onerror="this.src='https://cdn-icons-png.flaticon.com/512/2991/2991108.png'">
+        <div>
+          <h2 class="text-white font-bold text-sm leading-tight tracking-wider">I.E. CÉSAR VALLEJO MENDOZA</h2>
+          <span class="text-[11px] text-slate-400 font-medium">Control Asistencial</span>
+        </div>
+      </div>
+
+      <nav class="p-3 space-y-2 text-sm font-semibold" id="nav-menu">
+        <a href="dashboard.html" id="nav-inicio" class="nav-item flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
+          <i class="fa-solid fa-chart-pie w-5 text-center text-base text-cyan-300"></i>
+          <span>Inicio</span>
+        </a>
+
+        <a href="reportes.html" id="nav-reportes" class="nav-item flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
+          <i class="fa-solid fa-folder-open w-5 text-center text-base text-emerald-400"></i>
+          <span>Control y Reportes</span>
+        </a>
+
+        <!-- Rankings y Puntos (Activo) -->
+        <a href="rankings.html" id="nav-rankings" class="nav-item flex items-center gap-3 px-3.5 py-2.5 rounded-lg bg-blue-600 text-white shadow-md">
+          <i class="fa-solid fa-trophy w-5 text-center text-base text-amber-400"></i>
+          <span>Rankings y Puntos</span>
+        </a>
+
+        <!-- Inscribir / CRUD (Solo Visible para Director/Admin) -->
+        <a href="inscripciones.html" id="nav-crud" class="nav-item flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
+          <i class="fa-solid fa-user-pen w-5 text-center text-base text-purple-400"></i>
+          <span>Inscribir / CRUD</span>
+        </a>
+
+        <!-- Botón Cerrar Sesión -->
+      <!--  <button onclick="logout()" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-rose-400 hover:bg-rose-500/10 transition-colors font-bold text-sm text-left mt-6">
+          <i class="fa-solid fa-right-from-bracket w-5 text-center text-base text-rose-500"></i>
+          <span>Cerrar Sesión</span>
+        </button>-->
+      </nav>
+    </div>
+      </nav>
+    </div>
+
+    <!-- Perfil Dinámico al pie del Sidebar -->
+    <div class="p-4 border-t border-slate-800 bg-slate-950/40">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-full bg-blue-600/30 text-blue-400 flex items-center justify-center font-bold text-sm border border-blue-500/30" id="user-avatar">
+          U
+        </div>
+        <div class="overflow-hidden">
+          <p class="text-xs font-bold text-white truncate" id="user-name">Usuario</p>
+          <span class="inline-block px-2 py-0.5 text-[10px] font-extrabold rounded bg-slate-800 text-cyan-400 tracking-wide uppercase" id="user-role-badge">ROL</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- OVERLAY PARA CERRAR SIDEBAR EN MÓVIL -->
+  <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-10 hidden md:hidden"></div>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <main class="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8">
+    
+    <header class="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
+      <div>
+        <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+          🏆 Rankings de Méritos
+        </h1>
+        <p class="text-xs font-medium text-slate-500">Puntajes acumulados por puntualidad y asistencia</p>
+      </div>
+
+      <div class="flex flex-col sm:flex-row gap-3">
+        <button onclick="imprimirRankingDocentesPDF()" class="w-full sm:w-auto flex items-center justify-center gap-2 bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md transition-all">
+          <i class="fa-solid fa-file-pdf text-sm"></i> Ranking Docentes PDF
+        </button>
+        <button onclick="imprimirRankingAlumnosPDF()" class="w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md transition-all">
+          <i class="fa-solid fa-file-pdf text-sm"></i> Ranking Alumnos PDF
+        </button>
+      </div>
+    </header>
+
+    <div class="space-y-8">
+      <!-- TABLA: RANKING DE DOCENTES -->
+      <section class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
+        <h2 class="text-base sm:text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+          <i class="fa-solid fa-chalkboard-user text-sky-600"></i> Ranking de Docentes
+        </h2>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse min-w-[500px]">
+            <thead>
+              <tr class="border-b border-slate-200 text-[11px] font-extrabold text-slate-400 uppercase bg-slate-50/50">
+                <th class="py-3 px-4">Posición</th>
+                <th class="py-3 px-4">Nombre Completo</th>
+                <th class="py-3 px-4">Materia / Área</th>
+                <th class="py-3 px-4">Puntaje Acumulado</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyRankingDocentes" class="text-xs divide-y divide-slate-100 font-medium">
+              <tr>
+                <td colspan="4" class="py-6 text-center text-slate-400 font-semibold">Cargando ranking de docentes...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- TABLA: RANKING DE ALUMNOS -->
+      <section class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+          <h2 class="text-base sm:text-lg font-bold text-slate-800 flex items-center gap-2">
+            <i class="fa-solid fa-user-graduate text-emerald-600"></i> Ranking de Alumnos
+          </h2>
+          
+          <!-- FILTROS DE GRADO Y SECCIÓN AGREGADOS -->
+          <div class="flex items-center gap-2">
+            <select id="filtroGradoRanking" onchange="filtrarYRenderizarAlumnos()" class="text-xs bg-slate-50 border border-slate-300 rounded-lg p-2 font-semibold text-slate-700 focus:ring-blue-500 focus:border-blue-500">
+              <option value="Todos">Todos los Grados</option>
+              <option value="1ro">1ro</option>
+              <option value="2do">2do</option>
+              <option value="3ro">3ro</option>
+              <option value="4to">4to</option>
+              <option value="5to">5to</option>
+            </select>
+            <select id="filtroSeccionRanking" onchange="filtrarYRenderizarAlumnos()" class="text-xs bg-slate-50 border border-slate-300 rounded-lg p-2 font-semibold text-slate-700 focus:ring-blue-500 focus:border-blue-500">
+              <option value="Todos">Todas las Secciones</option>
+              <option value="A">A</option>
+              <option value="B">B</option>
+              <option value="C">C</option>
+              <option value="D">D</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse min-w-[500px]">
+            <thead>
+              <tr class="border-b border-slate-200 text-[11px] font-extrabold text-slate-400 uppercase bg-slate-50/50">
+                <th class="py-3 px-4">Posición</th>
+                <th class="py-3 px-4">Nombre Completo</th>
+                <th class="py-3 px-4">Aula / Grado</th>
+                <th class="py-3 px-4">Puntaje Acumulado</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyRankingAlumnos" class="text-xs divide-y divide-slate-100 font-medium">
+              <tr>
+                <td colspan="4" class="py-6 text-center text-slate-400 font-semibold">Cargando ranking de alumnos...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+  </main>
+
+  <script src="js/rankings.js"></script>
+  <script>
+    // Control del Menú Hamburguesa para Móviles
+    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+    const sidebar = document.getElementById('sidebar');
+    const sidebarOverlay = document.getElementById('sidebarOverlay');
+
+    function toggleMenu() {
+      sidebar.classList.toggle('-translate-x-full');
+      sidebarOverlay.classList.toggle('hidden');
+    }
+
+    if(mobileMenuBtn) mobileMenuBtn.addEventListener('click', toggleMenu);
+    if(sidebarOverlay) sidebarOverlay.addEventListener('click', toggleMenu);
+
+    // Personalización dinámica del perfil y menú por rol
+    document.addEventListener('DOMContentLoaded', () => {
+      const sessionRaw = localStorage.getItem('user_session') || localStorage.getItem('usuario');
+      if (!sessionRaw) {
+        window.location.href = 'index.html';
+        return;
+      }
+
+      const sessionData = JSON.parse(sessionRaw || '{}');
+      const rol = (sessionData.rol || '').toLowerCase();
+
+      // Cargar datos en la tarjeta inferior del perfil
+      if (sessionData.nombre) {
+        document.getElementById('user-name').innerText = sessionData.nombre;
+        document.getElementById('user-role-badge').innerText = (sessionData.rol || 'USUARIO').toUpperCase();
+        document.getElementById('user-avatar').innerText = sessionData.nombre.charAt(0).toUpperCase();
+      }
+
+      // Restricción: Ocultar Inscribir/CRUD si no es Admin o Director
+      const esAdminDirectivo = ['admin', 'director', 'directivo'].includes(rol);
+      if (!esAdminDirectivo) {
+        const navCrud = document.getElementById('nav-crud');
+        if (navCrud) navCrud.style.display = 'none';
+      }
+
+      // Restricción especial para ALUMNO: Ocultar enlaces de Inicio y Reportes en el menú
+      if (rol === 'alumno' || rol === 'estudiante') {
+        const navInicio = document.getElementById('nav-inicio');
+        const navReportes = document.getElementById('nav-reportes');
+        if (navInicio) navInicio.style.display = 'none';
+        if (navReportes) navReportes.style.display = 'none';
+      }
+    });
+  </script>
+</body>
+</html>

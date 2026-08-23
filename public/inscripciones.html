@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inscripciones y Fotochecks - I.E. CÉSAR VALLEJO MENDOZA</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+  <div class="dashboard-container">
+    <aside class="sidebar">
+      <div class="brand">🏫 I.E. CÉSAR VALLEJO MENDOZA</div>
+      <nav class="menu">
+        <a href="dashboard.html">🏠 Inicio</a>
+        <a href="reportes.html">📁 Control y Reportes</a>
+        <a href="rankings.html">🏆 Rankings y Puntos</a>
+        <a href="inscripciones.html" class="active">📝 Inscribir / CRUD</a>
+      </nav>
+    </aside>
+
+    <main class="main-content">
+      <div class="card-box">
+        <div class="card-title">✍️ REGISTRAR ALUMNO, DOCENTE O AUXILIAR</div>
+        
+        <form id="formRegistro">
+          <div class="form-grid-3">
+            <div class="form-group">
+              <label>ROL</label>
+              <select id="regRol" class="form-control" onchange="alternarCamposRol()">
+                <option value="Alumno">Alumno</option>
+                <option value="Docente">Docente</option>
+                <option value="Auxiliar">Auxiliar</option>
+                <option value="Director">Director</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>CÓDIGO</label>
+              <input type="text" class="form-control" value="Generado automático" disabled style="background:#f1f5f9; color:#94a3b8;">
+            </div>
+
+            <div class="form-group">
+              <label>NOMBRE COMPLETO</label>
+              <input type="text" id="regNombre" class="form-control" placeholder="Ej: Juan Pérez" required>
+            </div>
+          </div>
+
+          <!-- Alumno: Nivel, Grado, Sección -->
+          <div id="seccionAlumno" class="form-grid-3">
+            <div class="form-group">
+              <label>NIVEL</label>
+              <select id="regNivel" class="form-control">
+                <option value="Secundaria">Secundaria</option>
+              <!--  <option value="Primaria">Primaria</option> -->
+              </select>
+            </div>
+            <div class="form-group">
+              <label>GRADO</label>
+              <select id="regGrado" class="form-control">
+                <option value="1ro">1ro</option>
+                <option value="2do">2do</option>
+                <option value="3ro">3ro</option>
+                <option value="4to">4to</option>
+                <option value="5to">5to</option>
+              <!--  <option value="6to">6to</option> -->
+              </select>
+            </div>
+            <div class="form-group">
+              <label>SECCIÓN</label>
+              <select id="regSeccion" class="form-control">
+                <option value="A">A</option>
+                <option value="B">B</option>
+                <option value="C">C</option>
+                <option value="D">D</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Docente: Materia / Área Curricular -->
+          <div id="seccionDocente" class="form-group" style="display: none; margin-bottom: 15px;">
+            <label>MATERIA / ÁREA CURRICULAR</label>
+            <select id="regMateria" class="form-control">
+              <option value="Matemática">Matemática</option>
+              <option value="Comunicación">Comunicación</option>
+              <option value="Inglés">Inglés</option>
+              <option value="Ciencias Sociales">Ciencias Sociales</option>
+              <option value="Desarrollo Personal, Ciudadanía y Cívica (DPCC)">Desarrollo Personal, Ciudadanía y Cívica (DPCC)</option>
+              <option value="Ciencia y Tecnología">Ciencia y Tecnología</option>
+              <option value="Arte y Cultura">Arte y Cultura</option>
+              <option value="Educación Física">Educación Física</option>
+              <option value="Educación Religiosa">Educación Religiosa</option>
+              <option value="Educación para el Trabajo">Educación para el Trabajo</option>
+              <option value="Taller de Música">Taller de Música</option>
+            </select>
+          </div>
+
+          <div style="overflow: hidden; margin-top: 15px;">
+            <button type="submit" class="btn-submit">Guardar y Generar Fotocheck ARJE</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="table-container">
+        <h3>DIRECTORIO Y GESTIÓN DE USUARIOS</h3>
+        <br>
+        <table>
+          <thead>
+            <tr>
+              <th>CÓDIGO</th>
+              <th>NOMBRE</th>
+              <th>ROL</th>
+              <th>ASIGNACIÓN</th>
+              <th>ACCIÓN DIRECTIVA</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyUsuarios"></tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <!-- MODAL DE EDICIÓN DE USUARIO -->
+  <div id="modalEditar" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center; z-index:1000;">
+    <div style="background:#fff; padding:25px; border-radius:12px; width:400px; box-shadow:0 10px 25px rgba(0,0,0,0.2);">
+      <h3 style="margin-bottom:15px; color:#0f172a;">✏️ Editar Usuario</h3>
+      <input type="hidden" id="editId">
+      
+      <div class="form-group" style="margin-bottom:12px;">
+        <label>Nombre Completo:</label>
+        <input type="text" id="editNombre" class="form-control" required>
+      </div>
+
+      <div class="form-group" style="margin-bottom:12px;">
+        <label>Rol:</label>
+        <select id="editRol" class="form-control">
+          <option value="Alumno">Alumno</option>
+          <option value="Docente">Docente</option>
+          <option value="Auxiliar">Auxiliar</option>
+          <option value="Director">Director</option>
+        </select>
+      </div>
+
+      <div class="form-group" style="margin-bottom:20px;">
+        <label>Asignación / Aula / Área:</label>
+        <input type="text" id="editAsignacion" class="form-control" required>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:10px;">
+        <button onclick="cerrarModalEditar()" style="padding:8px 15px; background:#94a3b8; color:#fff; border:none; border-radius:6px; cursor:pointer;">Cancelar</button>
+        <button onclick="guardarEdicionUsuario()" class="btn-submit" style="padding:8px 15px;">Guardar Cambios</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="qrcode" style="display:none;"></div>
+  <script src="js/inscripciones.js"></script>
+</body>
+</html>

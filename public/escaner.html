@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Control de Asistencia - QR Pro</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Html5Qrcode Library -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+</head>
+<body class="bg-slate-50 font-sans text-slate-800 min-h-screen flex flex-col">
+
+    <!-- Header / Navbar -->
+    <header class="bg-indigo-700 text-white shadow-md px-6 py-4 flex flex-wrap justify-between items-center gap-4">
+        <div class="flex items-center gap-3">
+            <div class="bg-white/10 p-2.5 rounded-xl border border-white/20">
+                <i class="fa-solid fa-qrcode text-2xl text-indigo-200"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-extrabold tracking-tight">CONTROL DE ASISTENCIA</h1>
+                <p class="text-xs text-indigo-200">Escáner de Marcación Institucional en Tiempo Real</p>
+            </div>
+        </div>
+        
+        <!-- Controles de Jornada -->
+        <div class="flex items-center gap-3">
+            <button id="btn-jornada" onclick="toggleJornada()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm px-4 py-2.5 rounded-xl shadow-lg shadow-emerald-700/20 transition-all flex items-center gap-2 border border-emerald-500">
+                <i class="fa-solid fa-play"></i> <span id="text-jornada">Iniciar Jornada</span>
+            </button>
+            <div class="bg-slate-900/40 border border-white/10 rounded-xl px-4 py-2 text-right hidden sm:block">
+                <span id="reloj-digital" class="font-mono text-base font-bold block tracking-wider text-indigo-100">00:00:00 AM</span>
+                <span id="fecha-actual" class="text-[10px] text-slate-300 uppercase font-semibold">Cargando...</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Left Panel: Escáner y Configuración (5 Columnas) -->
+        <section class="lg:col-span-5 flex flex-col gap-6">
+            
+            <!-- Selector de Modos (Entrada / Salida) -->
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex gap-2">
+                <button id="btn-modo-entrada" onclick="cambiarModo('ENTRADA')" class="flex-1 py-3 px-4 font-bold text-sm rounded-xl transition-all flex items-center justify-center gap-2 border bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm shadow-indigo-100">
+                    <i class="fa-solid fa-right-to-bracket text-base"></i> Entrada
+                </button>
+                <button id="btn-modo-salida" onclick="cambiarModo('SALIDA')" class="flex-1 py-3 px-4 font-semibold text-sm rounded-xl transition-all flex items-center justify-center gap-2 border bg-white border-slate-200 text-slate-600 hover:bg-slate-50">
+                    <i class="fa-solid fa-right-from-bracket text-base"></i> Salida
+                </button>
+            </div>
+
+            <!-- Caja Visor del Escáner QR -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col">
+                <div class="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                    <div class="flex items-center gap-2">
+                        <span class="relative flex h-2 w-2">
+                            <span id="ping-status" class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 bg-slate-400"></span>
+                            <span id="dot-status" class="relative inline-flex rounded-full h-2 w-2 bg-slate-400"></span>
+                        </span>
+                        <span id="camara-status" class="text-xs font-normal text-slate-400">Escáner Desactivado</span>
+                    </div>
+                    <button id="btn-toggle-camara" onclick="toggleCamara()" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-1.5 bg-indigo-50 px-2.5 py-1.5 rounded-lg border border-indigo-100">
+                        <i class="fa-solid fa-power-off"></i> Encender Cámara
+                    </button>
+                </div>
+                
+                <!-- Contenedor del Lector QR -->
+                <div class="bg-slate-900 aspect-square w-full relative flex items-center justify-center text-slate-500 overflow-hidden">
+                    <div id="reader" class="w-full h-full"></div>
+                    <div id="placeholder-escaner" class="absolute inset-0 flex flex-col items-center justify-center p-6 text-center z-10 bg-slate-950/90 text-slate-400 transition-opacity duration-300">
+                        <div class="w-16 h-16 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center mb-4 shadow-xl">
+                            <i class="fa-solid fa-camera-slash text-2xl text-slate-500"></i>
+                        </div>
+                        <h3 class="text-sm font-bold text-slate-200">Cámara Apagada o en Espera</h3>
+                        <p class="text-xs text-slate-500 max-w-[240px] mt-1">Activa la jornada institucional y enciende el periférico para procesar registros.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Última Tarjeta de Persona Registrada -->
+            <div id="tarjeta-resultado" class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center text-center opacity-60 transition-all duration-300">
+                <div id="resultado-avatar" class="w-16 h-16 rounded-full bg-slate-100 border border-slate-200 text-slate-400 text-xl font-bold flex items-center justify-center mb-3">
+                    <i class="fa-solid fa-user-clock"></i>
+                </div>
+                <h3 id="resultado-nombre" class="font-bold text-base text-slate-700 tracking-tight">Esperando Registro</h3>
+                <p id="resultado-aula" class="text-xs text-slate-400 font-medium">Ninguna marcación procesada aún</p>
+                <div id="resultado-badge" class="mt-3 inline-block font-black px-2.5 py-1 rounded-lg text-[10px] bg-slate-100 text-slate-500 tracking-wider uppercase">
+                    SIN ACTIVIDAD
+                </div>
+            </div>
+        </section>
+
+        <!-- Right Panel: Historial de Asistencias del Día (7 Columnas) -->
+        <section class="lg:col-span-7 bg-white rounded-2xl shadow-sm border border-slate-100 flex flex-col overflow-hidden min-h-[500px]">
+            <div class="p-5 border-b border-slate-100 bg-slate-50 flex flex-wrap justify-between items-center gap-4">
+                <div>
+                    <h2 class="font-extrabold text-base text-slate-800 tracking-tight">Marcaciones Registradas Hoy</h2>
+                    <p class="text-xs text-slate-400">Flujo en vivo filtrado por el servidor</p>
+                </div>
+                <!-- Mini Indicadores rápidos -->
+                <div class="flex items-center gap-2 text-xs font-bold text-slate-500 bg-white p-1.5 rounded-xl border border-slate-200/60">
+                    <span class="px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-100">Puntuales: <span id="count-puntual">0</span></span>
+                    <span class="px-2 py-1 rounded-lg bg-amber-50 text-amber-700 border border-amber-100">Tardanzas: <span id="count-tardanza">0</span></span>
+                </div>
+            </div>
+
+            <!-- Tabla de Registros -->
+            <div class="flex-1 overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50/60 text-slate-400 text-[10px] font-bold uppercase tracking-wider border-b border-slate-100">
+                            <th class="py-3 px-5">Código / Persona</th>
+                            <th class="py-3 px-4">Asignación / Aula</th>
+                            <th class="py-3 px-4 text-emerald-600">H. Entrada</th>
+                            <th class="py-3 px-4 text-indigo-600">H. Salida</th>
+                            <th class="py-3 px-5 text-right">Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-asistencias" class="divide-y divide-slate-100 text-sm">
+                        <!-- Filas dinámicas mediante JS -->
+                        <tr id="tabla-vacia" class="text-center text-slate-400">
+                            <td colspan="4" class="py-12 flex flex-col items-center justify-center gap-2">
+                                <i class="fa-solid fa-folder-open text-3xl text-slate-200"></i>
+                                <span class="text-xs text-slate-400 font-medium">No hay marcaciones registradas para el día de hoy.</span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <!-- Contenedor Flotante de Notificaciones Toast -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2.5 max-w-sm w-full"></div>
+
+    <!-- MODAL DE ASISTENCIA (CORREGIDO Y OPTIMIZADO CON ESCALA DINÁMICA) -->
+    <div id="modal-asistencia" class="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-300 items-center justify-center hidden p-4">
+        <div class="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-slate-100 flex flex-col items-center transform scale-95 transition-transform duration-300 relative overflow-hidden">
+            
+            <!-- Adorno de Fondo Superior -->
+            <div class="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
+
+            <!-- Contenedor del Ícono Dinámico -->
+            <div id="modal-icon-container" class="w-16 h-16 rounded-2xl flex items-center justify-center text-white text-2xl shadow-lg mb-4">
+                <i id="modal-icon" class="fa-solid"></i>
+            </div>
+
+            <!-- Datos Principales de la Persona -->
+            <h2 id="modal-nombre" class="font-black text-xl text-slate-800 tracking-tight text-center leading-tight">Cargando Nombre...</h2>
+            <p class="text-xs text-slate-400 mt-1 font-medium flex items-center gap-1.5">
+                ID: <span id="modal-codigo" class="font-bold text-slate-600">-</span>
+            </p>
+
+            <!-- Datos Operativos Internos -->
+            <div class="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 my-4 space-y-2.5 text-xs text-slate-600">
+                <div class="flex justify-between items-center">
+                    <span class="text-slate-400 font-medium">Ubicación/Aula:</span>
+                    <span id="modal-aula" class="font-bold text-slate-700 text-right max-w-[180px] truncate">---</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-slate-400 font-medium">Marcación Registrada:</span>
+                    <span id="modal-hora" class="font-mono font-bold text-slate-800 bg-slate-200/60 px-2 py-0.5 rounded border border-slate-200">00:00:00 AM</span>
+                </div>
+            </div>
+
+            <!-- Badge de Estado Dinámico Real -->
+            <div class="mb-5">
+                <span id="modal-estado" class="font-black px-3 py-1 rounded-lg text-[11px] tracking-wider uppercase shadow-sm">
+                    PENDIENTE
+                </span>
+            </div>
+
+            <!-- Botón de Cierre Manual -->
+            <button onclick="cerrarModalAsistencia()" class="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm rounded-xl shadow-lg shadow-slate-900/10 transition-all cursor-pointer">
+                Entendido / Continuar
+            </button>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 text-center py-3 text-xs text-slate-400 font-medium mt-auto">
+        &copy; 2026 Control de Asistencia QR Inteligente. Todos los derechos reservados.
+    </footer>
+
+    <!-- LOGICA SCRIPT DEL SISTEMA -->
+    <script>
+        // Variables de Estado de Aplicación
+        let html5QrcodeScanner = null;
+        let camaraEncendida = false;
+        let jornadaActiva = false;
+        let modoActual = 'ENTRADA'; // E: ENTRADA | S: SALIDA
+        
+        // CORRECCIÓN CLAVE: Evita envíos masivos y dobles marcas en milisegundos
+        let procesandoEscaneoQR = false; 
+
+        // Variable global para almacenar en memoria las asistencias renderizadas en la tabla
+        let asistenciasCargadasMemoria = [];
+
+        // Inicialización General
+        document.addEventListener('DOMContentLoaded', () => {
+            actualizarReloj();
+            setInterval(actualizarReloj, 1000);
+            cargarAsistenciasHoy();
+        });
+
+        // Reloj Digital de Cabecera
+        function actualizarReloj() {
+            const ahora = new Date();
+            const reloj = document.getElementById('reloj-digital');
+            const fecha = document.getElementById('fecha-actual');
+            
+            if(reloj) {
+                reloj.innerText = ahora.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+            }
+            if(fecha) {
+                fecha.innerText = ahora.toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' });
+            }
+        }
+
+        // Alternar el Estado de la Jornada
+        function toggleJornada() {
+            const btn = document.getElementById('btn-jornada');
+            const text = document.getElementById('text-jornada');
+            
+            if (!jornadaActiva) {
+                jornadaActiva = true;
+                btn.className = "bg-rose-600 hover:bg-rose-500 text-white font-bold text-sm px-4 py-2.5 rounded-xl shadow-lg shadow-rose-700/20 transition-all flex items-center gap-2 border border-rose-500";
+                text.innerText = "Finalizar Jornada";
+                mostrarNotificacion("🚀 Jornada Iniciada. El escáner está listo para operar.", "bg-emerald-100 text-emerald-800 border-emerald-300");
+                iniciarCamara();
+            } else {
+                jornadaActiva = false;
+                btn.className = "bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm px-4 py-2.5 rounded-xl shadow-lg shadow-emerald-700/20 transition-all flex items-center gap-2 border border-emerald-500";
+                text.innerText = "Iniciar Jornada";
+                mostrarNotificacion("🛑 Jornada Cerrada. No se aceptarán más marcas.", "bg-amber-100 text-amber-800 border-amber-300");
+                apagarCamara();
+            }
+        }
+
+        // Selector entre Entrada y Salida
+        function cambiarModo(nuevoModo) {
+            modoActual = nuevoModo;
+            const btnEntrada = document.getElementById('btn-modo-entrada');
+            const btnSalida = document.getElementById('btn-modo-salida');
+
+            if (modoActual === 'ENTRADA') {
+                btnEntrada.className = "flex-1 py-3 px-4 font-bold text-sm rounded-xl transition-all flex items-center justify-center gap-2 border bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm shadow-indigo-100";
+                btnSalida.className = "flex-1 py-3 px-4 font-semibold text-sm rounded-xl transition-all flex items-center justify-center gap-2 border bg-white border-slate-200 text-slate-600 hover:bg-slate-50";
+            } else {
+                btnSalida.className = "flex-1 py-3 px-4 font-bold text-sm rounded-xl transition-all flex items-center justify-center gap-2 border bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm shadow-indigo-100";
+                btnEntrada.className = "flex-1 py-3 px-4 font-semibold text-sm rounded-xl transition-all flex items-center justify-center gap-2 border bg-white border-slate-200 text-slate-600 hover:bg-slate-50";
+            }
+            mostrarNotificacion(`🔄 Modo cambiado a: ${modoActual}`, "bg-slate-100 text-slate-800 border-slate-300");
+        }
+
+        // Gestión del Ciclo de Vida de la Cámara (Html5Qrcode)
+        function toggleCamara() {
+            if (!jornadaActiva) {
+                mostrarNotificacion("⚠️ Primero debes presionar el botón 'Iniciar Jornada'.", "bg-amber-100 text-amber-800 border-amber-300");
+                return;
+            }
+            if (camaraEncendida) {
+                apagarCamara();
+            } else {
+                iniciarCamara();
+            }
+        }
+
+        function iniciarCamara() {
+            if (camaraEncendida) return;
+            
+            const placeholder = document.getElementById('placeholder-escaner');
+            if(placeholder) placeholder.style.opacity = '0';
+            
+            setTimeout(() => {
+                if(placeholder) placeholder.classList.add('hidden');
+                
+                html5QrcodeScanner = new Html5Qrcode("reader");
+                html5QrcodeScanner.start(
+                    { facingMode: "environment" },
+                    { fps: 15, qrbox: { width: 250, height: 250 } },
+                    onScanSuccess,
+                    onScanFailure
+                ).then(() => {
+                    camaraEncendida = true;
+                    actualizarEstadoCamaraUI(true);
+                }).catch(err => {
+                    console.error("Error al iniciar cámara:", err);
+                    mostrarNotificacion("❌ Error al acceder al dispositivo de captura.", "bg-rose-100 text-rose-800 border-rose-300");
+                    if(placeholder) {
+                        placeholder.classList.remove('hidden');
+                        placeholder.style.opacity = '1';
+                    }
+                });
+            }, 300);
+        }
+
+        async function apagarCamara() {
+            if (!html5QrcodeScanner || !camaraEncendida) return;
+            try {
+                await html5QrcodeScanner.stop();
+                html5QrcodeScanner = null;
+                camaraEncendida = false;
+                actualizarEstadoCamaraUI(false);
+                
+                const placeholder = document.getElementById('placeholder-escaner');
+                if(placeholder) {
+                    placeholder.classList.remove('hidden');
+                    setTimeout(() => { placeholder.style.opacity = '1'; }, 50);
+                }
+            } catch (err) {
+                console.error("Error apagando la cámara:", err);
+            }
+        }
+
+        function actualizarEstadoCamaraUI(activa) {
+            const statusLabel = document.getElementById('camara-status');
+            const btnToggle = document.getElementById('btn-toggle-camara');
+            const ping = document.getElementById('ping-status');
+            const dot = document.getElementById('dot-status');
+
+            if (activa) {
+                if (statusLabel) statusLabel.className = "text-xs font-bold text-emerald-600";
+                if (statusLabel) statusLabel.innerText = "Escáner Activo y Buscando QR";
+                if (btnToggle) btnToggle.innerHTML = `<i class="fa-solid fa-power-off"></i> Apagar Cámara`;
+                if (ping) ping.className = "animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 bg-emerald-400";
+                if (dot) dot.className = "relative inline-flex rounded-full h-2 w-2 bg-emerald-500";
+            } else {
+                if (statusLabel) statusLabel.className = "text-xs font-normal text-slate-400";
+                if (statusLabel) statusLabel.innerText = "Escáner Desactivado";
+                if (btnToggle) btnToggle.innerHTML = `<i class="fa-solid fa-power-off"></i> Encender Cámara`;
+                if (ping) ping.className = "animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 bg-slate-400";
+                if (dot) dot.className = "relative inline-flex rounded-full h-2 w-2 bg-slate-400";
+            }
+        }
+
+        function onScanSuccess(decodedText, decodedResult) {
+            procesarMarcacion(decodedText);
+        }
+
+        function onScanFailure(error) {
+            // Callback silencioso por rendimiento
+        }
+
+        // ========================================================
+        // CONTROL ASÍNCRONO REMOTO CORREGIDO CON VALIDACIÓN DE DUPLICADOS
+        // ========================================================
+        async function procesarMarcacion(codigo) {
+            if (!jornadaActiva) {
+                mostrarNotificacion("⚠️ La jornada está CERRADA. Presiona 'Iniciar Jornada' primero.", "bg-amber-100 text-amber-800 border-amber-300");
+                return;
+            }
+
+            const codigoLimpio = codigo.trim();
+
+            // 1. VALIDACIÓN LOCAL DE DUPLICADOS (Mismo Día)
+            // Se comprueba en el arreglo de asistencias cargadas de hoy si el código ya tiene una marca coincidente
+            const registroExistente = asistenciasCargadasMemoria.find(item => item.codigo === codigoLimpio);
+            
+            if (registroExistente) {
+                const estadoMayuscula = (registroExistente.estado || '').toUpperCase();
+                
+                if (modoActual === 'ENTRADA' && (estadoMayuscula.includes('PUNTUAL') || estadoMayuscula.includes('TARDANZA') || estadoMayuscula.includes('ENTRADA'))) {
+                    mostrarNotificacion("❌ ERROR, YA INGRESÓ", "bg-rose-100 text-rose-800 border-rose-300 font-bold");
+                    return; 
+                }
+                
+                if (modoActual === 'SALIDA' && estadoMayuscula.includes('SALIDA')) {
+                    mostrarNotificacion("❌ ERROR, YA MARCÓ SALIDA", "bg-rose-100 text-rose-800 border-rose-300 font-bold");
+                    return;
+                }
+            }
+
+            // 2. Bloqueo inmediato anti-rebote
+            if (procesandoEscaneoQR) return;
+            procesandoEscaneoQR = true;
+
+            // 3. Detener cámara en caliente antes del fetch para congelar fotograma
+            if (html5QrcodeScanner && camaraEncendida) {
+                try {
+                    await html5QrcodeScanner.stop();
+                    camaraEncendida = false;
+                    actualizarEstadoCamaraUI(false);
+                } catch(e) {
+                    console.error("Error congelando cámara:", e);
+                }
+            }
+
+            try {
+                const response = await fetch('/api/asistencia/registrar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        codigo: codigoLimpio,
+                        tipo: modoActual,
+                        fecha_hora: new Date().toISOString()
+                    })
+                });
+
+                const res = await response.json();
+
+                if (response.ok && (res.success || res.ok)) {
+                    const payload = res.persona || res.alumno || res.docente || res.auxiliar || res.usuario || {
+                        codigo: codigoLimpio,
+                        nombre: res.nombre || 'No Especificado',
+                        materia_aula: res.asignacion || res.aula || res.grado_seccion || 'Asignación Regular'
+                    };
+                    
+                    payload.estadoReal = res.estado || payload.estado || (modoActual === 'ENTRADA' ? 'PUNTUAL' : 'SALIDA');
+
+                    abrirModalAsistencia(payload);
+                    mostrarTarjetaResultado(payload);
+                    await cargarAsistenciasHoy();
+
+                } else {
+                    let mensajeServidor = res.mensaje || 'Error al procesar el registro';
+                    // Sanitización de textos devueltos por el backend para mantener consistencia
+                    if (mensajeServidor.toLowerCase().includes('ya ingresó') || mensajeServidor.toLowerCase().includes('entrada ya registrada')) {
+                        mensajeServidor = "ERROR, YA INGRESÓ";
+                    } else if (mensajeServidor.toLowerCase().includes('ya marcó salida') || mensajeServidor.toLowerCase().includes('salida ya registrada')) {
+                        mensajeServidor = "ERROR, YA MARCÓ SALIDA";
+                    }
+
+                    mostrarNotificacion(`❌ ${mensajeServidor}`, "bg-rose-100 text-rose-800 border-rose-300 font-bold");
+                    procesandoEscaneoQR = false;
+                    iniciarCamara();
+                }
+            } catch(err) {
+                console.error("Modo Offline activado por fallo de red:", err);
+                const fallbackData = {
+                    codigo: codigoLimpio,
+                    nombre: 'Registro de Emergencia',
+                    materia_aula: 'Modo Offline',
+                    estadoReal: modoActual === 'ENTRADA' ? 'PUNTUAL' : 'SALIDA'
+                };
+                
+                abrirModalAsistencia(fallbackData);
+                mostrarTarjetaResultado(fallbackData);
+                
+                // Agregar localmente al listado de memoria para que la validación funcione de forma offline
+                asistenciasCargadasMemoria.push({
+                    codigo: fallbackData.codigo,
+                    nombre: fallbackData.nombre,
+                    materia_aula: fallbackData.materia_aula,
+                    hora: new Date().toLocaleTimeString(),
+                    estado: fallbackData.estadoReal
+                });
+                renderizarTablaAsistencias(asistenciasCargadasMemoria);
+            }
+        }
+
+        function abrirModalAsistencia(data) {
+            const horaFormateada = new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+            
+            document.getElementById('modal-nombre').innerText = data.nombre || 'No Especificado';
+            document.getElementById('modal-codigo').innerText = data.codigo || '-';
+            document.getElementById('modal-aula').innerText = data.materia_aula || data.asignacion || 'Asignación Regular';
+            document.getElementById('modal-hora').innerText = horaFormateada;
+
+            const iconContainer = document.getElementById('modal-icon-container');
+            const icon = document.getElementById('modal-icon');
+            const badgeEstado = document.getElementById('modal-estado');
+
+            const estadoAMostrar = data.estadoReal.toUpperCase();
+
+            if (modoActual === 'ENTRADA') {
+                if (estadoAMostrar.includes('TARDANZA')) {
+                    iconContainer.className = "w-16 h-16 bg-amber-500 rounded-2xl flex items-center justify-center text-white text-2xl shadow-lg shadow-amber-500/20 mb-4";
+                    icon.className = "fa-solid fa-clock";
+                    badgeEstado.className = "font-black px-2.5 py-1 rounded-md text-[10px] bg-amber-100 text-amber-800 border border-amber-200";
+                } else if (estadoAMostrar.includes('LOCAL')) {
+                    iconContainer.className = "w-16 h-16 bg-blue-500 rounded-2xl flex items-center justify-center text-white text-2xl shadow-lg shadow-blue-500/20 mb-4";
+                    icon.className = "fa-solid fa-wifi-slash";
+                    badgeEstado.className = "font-black px-2.5 py-1 rounded-md text-[10px] bg-blue-100 text-blue-800 border border-blue-200";
+                } else {
+                    iconContainer.className = "w-16 h-16 bg-emerald-500 rounded-2xl flex items-center justify-center text-white text-2xl shadow-lg shadow-emerald-500/20 mb-4";
+                    icon.className = "fa-solid fa-check";
+                    badgeEstado.className = "font-black px-2.5 py-1 rounded-md text-[10px] bg-emerald-100 text-emerald-800 border border-emerald-200";
+                }
+                badgeEstado.innerText = estadoAMostrar;
+            } else {
+                iconContainer.className = "w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center text-white text-2xl shadow-lg shadow-indigo-500/20 mb-4";
+                icon.className = "fa-solid fa-right-from-bracket";
+                badgeEstado.innerText = "SALIDA REGISTRADA";
+                badgeEstado.className = "font-black px-2.5 py-1 rounded-md text-[10px] bg-indigo-100 text-indigo-800 border border-indigo-200";
+            }
+
+            const modal = document.getElementById('modal-asistencia');
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                setTimeout(() => {
+                    modal.classList.remove('opacity-0', 'pointer-events-none');
+                    if (modal.firstElementChild) modal.firstElementChild.className = modal.firstElementChild.className.replace('scale-95', 'scale-100');
+                }, 50);
+            }
+        }
+
+        function cerrarModalAsistencia() {
+            const modal = document.getElementById('modal-asistencia');
+            if (modal) {
+                if (modal.firstElementChild) modal.firstElementChild.className = modal.firstElementChild.className.replace('scale-100', 'scale-95');
+                modal.classList.add('opacity-0', 'pointer-events-none');
+                setTimeout(() => {
+                    modal.classList.remove('flex');
+                    modal.classList.add('hidden');
+                    
+                    procesandoEscaneoQR = false; 
+                    if (jornadaActiva) {
+                        iniciarCamara();
+                    }
+                }, 300);
+            }
+        }
+
+        function mostrarTarjetaResultado(data) {
+            const tarjeta = document.getElementById('tarjeta-resultado');
+            const avatar = document.getElementById('resultado-avatar');
+            const txtNombre = document.getElementById('resultado-nombre');
+            const txtAula = document.getElementById('resultado-aula');
+            const badge = document.getElementById('resultado-badge');
+
+            if(!tarjeta) return;
+            tarjeta.classList.remove('opacity-60');
+            tarjeta.classList.add('scale-[1.02]', 'shadow-md', 'border-indigo-100');
+
+            txtNombre.innerText = data.nombre || 'No Especificado';
+            txtAula.innerText = data.materia_aula || data.asignacion || 'Asignación Regular';
+            
+            const estado = (data.estadoReal || 'REGISTRADO').toUpperCase();
+            badge.innerText = estado;
+
+            if(estado.includes('TARDANZA')) {
+                badge.className = "mt-3 inline-block font-black px-2.5 py-1 rounded-lg text-[10px] bg-amber-100 text-amber-800 uppercase tracking-wider";
+                avatar.className = "w-16 h-16 rounded-full bg-amber-50 text-amber-500 border border-amber-200 text-xl font-bold flex items-center justify-center mb-3";
+                avatar.innerHTML = `<i class="fa-solid fa-business-time"></i>`;
+            } else if(estado.includes('SALIDA')) {
+                badge.className = "mt-3 inline-block font-black px-2.5 py-1 rounded-lg text-[10px] bg-indigo-100 text-indigo-800 uppercase tracking-wider";
+                avatar.className = "w-16 h-16 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-200 text-xl font-bold flex items-center justify-center mb-3";
+                avatar.innerHTML = `<i class="fa-solid fa-person-walking-arrow-right"></i>`;
+            } else {
+                badge.className = "mt-3 inline-block font-black px-2.5 py-1 rounded-lg text-[10px] bg-emerald-100 text-emerald-800 uppercase tracking-wider";
+                avatar.className = "w-16 h-16 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200 text-xl font-bold flex items-center justify-center mb-3";
+                avatar.innerHTML = `<i class="fa-solid fa-user-check"></i>`;
+            }
+
+            setTimeout(() => { tarjeta.classList.remove('scale-[1.02]'); }, 400);
+        }
+
+        // Obtener historial diario consolidado
+        async function cargarAsistenciasHoy() {
+            try {
+                const response = await fetch('/api/asistencia/hoy');
+                if(!response.ok) throw new Error("API Offline");
+                const datos = await response.json();
+                asistenciasCargadasMemoria = datos; // Guardar en memoria global
+                renderizarTablaAsistencias(datos);
+            } catch(e) {
+                console.warn("API remota inaccesible, usando datos en memoria actual.");
+                // Si la tabla está vacía y falla la red por primera vez, mostramos ejemplos base
+                if (asistenciasCargadasMemoria.length === 0) {
+                    asistenciasCargadasMemoria = [
+                        { codigo: "AL202601", nombre: "Carlos Mendoza Torres", materia_aula: "5to de Secundaria - A", hora: "07:42:15 AM", estado: "PUNTUAL" },
+                        { codigo: "DOC4412", nombre: "Dra. Elena Rostova", materia_aula: "Álgebra Avanzada", hora: "08:03:10 AM", estado: "TARDANZA" }
+                    ];
+                }
+                renderizarTablaAsistencias(asistenciasCargadasMemoria);
+            }
+        }
+
+        function renderizarTablaAsistencias(lista) {
+            const tbody = document.getElementById('tabla-asistencias');
+            if (!tbody) return;
+
+            // 1. Manejo del estado vacío cuando no hay registros en la lista
+            if (!lista || lista.length === 0) {
+                tbody.innerHTML = `
+                    <tr id="tabla-vacia" class="text-center text-slate-400">
+                        <td colspan="5" class="py-12 flex flex-col items-center justify-center gap-2">
+                            <i class="fa-solid fa-folder-open text-3xl text-slate-200"></i>
+                            <span class="text-xs text-slate-400 font-medium">No hay marcaciones registradas para el día de hoy.</span>
+                        </td>
+                    </tr>`;
+                
+                // Reiniciar contadores del panel superior en cero
+                const elemPuntual = document.getElementById('count-puntual');
+                const elemTardanza = document.getElementById('count-tardanza');
+                if (elemPuntual) elemPuntual.innerText = "0";
+                if (elemTardanza) elemTardanza.innerText = "0";
+                return;
+            }
+
+            let html = "";
+            let cPuntual = 0;
+            let cTardanza = 0;
+
+            // 2. Recorrido completo de la lista de marcaciones
+            lista.forEach(item => {
+                const est = (item.estado || 'REGISTRADO').toUpperCase();
+                let badgeClass = "bg-emerald-100 text-emerald-800 border-emerald-200";
+                
+                // Clasificación de badges e incremento de contadores para resumen en vivo
+                if (est.includes('TARDANZA')) {
+                    badgeClass = "bg-amber-100 text-amber-800 border-amber-200";
+                    cTardanza++;
+                } else if (est.includes('SALIDA')) {
+                    badgeClass = "bg-indigo-100 text-indigo-800 border-indigo-200";
+                } else {
+                    cPuntual++;
+                }
+
+                // Asignación explícita de Entradas y Salidas
+                const horaEntrada = item.hora_entrada || item.hora || '---';
+                const horaSalida = item.hora_salida || '---';
+
+                // Construcción completa de la fila HTML respetando las 5 columnas
+                html += `
+                    <tr class="hover:bg-slate-50/80 transition-colors border-b border-slate-100">
+                        <td class="py-3 px-5 font-medium">
+                            <div class="font-bold text-slate-800">${item.nombre || 'No Especificado'}</div>
+                            <div class="text-[11px] text-slate-400 font-mono">ID: ${item.codigo || '-'}</div>
+                        </td>
+                        <td class="py-3 px-4 text-slate-500 font-medium">
+                            ${item.materia_aula || item.aula || item.asignacion || '---'}
+                        </td>
+                        <td class="py-3 px-4 font-mono font-bold text-emerald-600 text-xs">
+                            ${horaEntrada}
+                        </td>
+                        <td class="py-3 px-4 font-mono font-bold text-indigo-600 text-xs">
+                            ${horaSalida}
+                        </td>
+                        <td class="py-3 px-5 text-right">
+                            <span class="font-bold px-2 py-0.5 rounded-md text-[10px] border ${badgeClass}">
+                                ${est}
+                            </span>
+                        </td>
+                    </tr>`;
+            });
+
+            // 3. Inserción del HTML generado en el cuerpo de la tabla
+            tbody.innerHTML = html;
+
+            // 4. Actualización de los marcadores contadores del encabezado
+            const elemPuntual = document.getElementById('count-puntual');
+            const elemTardanza = document.getElementById('count-tardanza');
+            if (elemPuntual) elemPuntual.innerText = cPuntual;
+            if (elemTardanza) elemTardanza.innerText = cTardanza;
+        }
+
+        // Toasts informativos dinámicos
+        function mostrarNotificacion(mensaje, clasesEstilo) {
+            const container = document.getElementById('toast-container');
+            if(!container) return;
+
+            const toast = document.createElement('div');
+            toast.className = `p-3.5 rounded-xl border text-xs font-bold shadow-lg transition-all duration-300 transform translate-y-2 opacity-0 flex items-center justify-between gap-3 ${clasesEstilo}`;
+            toast.innerHTML = `<span>${mensaje}</span><button onclick="this.parentElement.remove()" class="text-current opacity-60 hover:opacity-100 font-black text-sm">&times;</button>`;
+            
+            container.appendChild(toast);
+            setTimeout(() => { toast.classList.remove('translate-y-2', 'opacity-0'); }, 50);
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-[-10px]');
+                setTimeout(() => { toast.remove(); }, 300);
+            }, 4000);
+        }
+    </script>
+</body>
+</html>
